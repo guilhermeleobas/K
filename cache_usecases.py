@@ -29,6 +29,18 @@ if os.environ.get("USE_Z_CACHE", False):
 Z = 1
 
 
+@jit(nopython=True, cache=True)
+def f2(x):
+    return x + f1(x - 1)
+
+
+@jit(nopython=True, cache=True)
+def f1(x):
+    if x < 1:
+        return x
+    return x + f2(x - 1)
+
+
 def incr(x):
     return x + 1
 
@@ -167,6 +179,8 @@ all_fns = [
     incr_or_decr_by_Z,
     all_incr_decr_fns,
     outer0,
+    f1,
+    f2,
 ]
 
 

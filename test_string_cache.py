@@ -492,6 +492,46 @@ class TestCacheStringSource(CacheStringSourceBaseTest):
         self.check_pycache(4)
         self.check_hits(f, 0, 1)
 
+    def test_f2_f1(self):
+        mod = self.import_module()
+        mod.load(mod.f1)
+        mod.load(mod.f2)
+        self.assertEqual(mod.str_f2(1), mod.f2(1))
+        self.assertEqual(mod.str_f1(4), mod.f1(4))
+        self.check_pycache(4)  # 2 data + 2 index
+        self.check_hits(mod.str_f2, 0, 1)  # 0 hit + 1 miss
+        self.check_hits(mod.str_f1, 0, 1)  # 0 hit + 1 miss
+
+        mod = self.import_module()
+        mod.load(mod.f1)
+        mod.load(mod.f2)
+        self.assertEqual(mod.str_f2(1), mod.f2(1))
+        self.assertEqual(mod.str_f1(4), mod.f1(4))
+        self.check_pycache(4)  # 2 data + 2 index
+        self.check_hits(mod.str_f2, 1, 0)  # 1 hit + 0 miss
+        self.check_hits(mod.str_f1, 1, 0)  # 1 hit + 0 miss
+
+    # calling f1 first results in "cannot type infer runaway recursion"
+    @unittest.expectedFailure
+    def test_f1_f2(self):
+        mod = self.import_module()
+        mod.load(mod.f1)
+        mod.load(mod.f2)
+        self.assertEqual(mod.str_f1(4), mod.f1(4))
+        self.assertEqual(mod.str_f2(1), mod.f2(1))
+        self.check_pycache(4)  # 2 data + 2 index
+        self.check_hits(mod.str_f2, 0, 1)  # 0 hit + 1 miss
+        self.check_hits(mod.str_f1, 0, 1)  # 0 hit + 1 miss
+
+        mod = self.import_module()
+        mod.load(mod.f1)
+        mod.load(mod.f2)
+        self.assertEqual(mod.str_f1(4), mod.f1(4))
+        self.assertEqual(mod.str_f2(1), mod.f2(1))
+        self.check_pycache(4)  # 2 data + 2 index
+        self.check_hits(mod.str_f2, 1, 0)  # 1 hit + 0 miss
+        self.check_hits(mod.str_f1, 1, 0)  # 1 hit + 0 miss
+
 
 class TestZCacheStringSource(TestCacheStringSource):
     def setUp(self):

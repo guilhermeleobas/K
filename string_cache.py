@@ -16,7 +16,6 @@ STRING_CACHE_DIR = "./string_pycache"
 def custom_serialize(obj):
     if isinstance(obj, (int, str, complex, float)):
         return serialize.dumps(obj)
-        # return [repr(obj)]
 
     if isinstance(obj, Iterable):
         r = b""
@@ -24,7 +23,6 @@ def custom_serialize(obj):
             r += custom_serialize(x)
         return r
     return serialize.dumps(obj)
-    # return [repr(obj)]
 
 
 @custom_serialize.register(ctypes._CFuncPtr)
@@ -32,9 +30,15 @@ def custom_serialize_dispatcher(obj):
     return serialize.dumps(obj)
 
 
+seen = set()
+
+
 @custom_serialize.register(Dispatcher)
 def custom_serialize_dispatcher(obj):
-    return custom_serialize(obj.py_func)
+    seen.add(obj.py_func.__name__)
+    r = custom_serialize(obj.py_func)
+    seen.discard(obj.py_func.__name__)
+    return r
 
 
 @custom_serialize.register(FunctionType)
@@ -49,8 +53,11 @@ def custom_serialize_pyfunc(obj):
     # Distinguish functions with the same name but with different closure
     # captured values. i.e. "str_closureX" test cases
     for x in obj.__code__.co_names:
-        other = obj.__globals__.get(x)
-        buf += custom_serialize(other)
+        if x in seen:
+            buf += custom_serialize(x)
+        else:
+            other = obj.__globals__.get(x)
+            buf += custom_serialize(other)
 
     return buf
 
@@ -84,11 +91,11 @@ class _StringCacheLocator(_CacheLocator):
             return
         fname = f"<string>-{py_func.__name__}-{cls._hash(py_func)}"
         self = cls(py_func, fname)
-        # try:
-        #     self.ensure_cache_path()
-        # except OSError:
-        #     # Cannot ensure the cache directory exists or is writable
-        #     return
+        try:
+            self.ensure_cache_path()
+        except OSError:
+            # Cannot ensure the cache directory exists or is writable
+            return
         return self
 
 
